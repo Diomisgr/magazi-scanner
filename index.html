@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAGAZI SCANNER PRO</title>
+    <style>
+        body { 
+            background-color: #70dcdb; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+        
+        input { 
+            width: 100%; 
+            padding: 15px; 
+            font-size: 18px; 
+            border-radius: 8px; 
+            border: 2px solid #333; 
+            margin-bottom: 20px; 
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        #barcodeContainer { 
+            background-color: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            min-height: 180px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        img { 
+            width: 100%; 
+            max-width: 100%;
+            height: auto; 
+            display: none; 
+        }
+
+        /* Spacer για να σπρώξει το copyright κάτω */
+        .spacer { flex-grow: 1; }
+
+        .disco-bar { 
+            height: 12px; 
+            background-color: #FFD700; 
+            width: 100%; 
+            border-radius: 5px;
+            margin: 5px 0;
+            animation: blink 0.8s infinite; 
+        }
+
+        @keyframes blink { 
+            0% { opacity: 1; } 
+            50% { opacity: 0; } 
+            100% { opacity: 1; } 
+        }
+
+        .copyright { 
+            color: #333; 
+            font-weight: bold; 
+            font-size: 14px; 
+            margin: 10px 0;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="inputBox" placeholder="ΕΠΙΚΟΛΛΗΣΗ ΚΩΔΙΚΟΥ ΕΔΩ" oninput="generateBarcode()">
+
+    <div id="barcodeContainer">
+        <img id="barcodeImg">
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="disco-bar"></div>
+    <div class="copyright">COPYRIGHT BY JIM DIOMIS</div>
+    <div class="disco-bar"></div>
+
+    <script>
+        function generateBarcode() {
+            // Παίρνουμε το κείμενο και με το .replace(/\s/g, '') σβήνουμε ΟΛΑ τα κενά
+            let val = document.getElementById('inputBox').value.trim().replace(/\s/g, '');
+            let img = document.getElementById('barcodeImg');
+            
+            if (val.length > 5) {
+                // Τώρα το barcodeText δεν έχει καθόλου κενά, ακόμα κι αν έκανε λάθος ο υπάλληλος
+                let barcodeText = val; 
+                
+                img.src = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + encodeURIComponent(barcodeText) + "&scale=3&rotate=N&includetext=false";
+                img.style.display = "block";
+            } else {
+                img.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>
