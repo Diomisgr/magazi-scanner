@@ -45,7 +45,6 @@
             display: none; 
         }
 
-        /* Spacer για να σπρώξει το copyright κάτω */
         .spacer { flex-grow: 1; }
 
         .disco-bar { 
@@ -88,14 +87,14 @@
 
     <script>
         function generateBarcode() {
-            // Παίρνουμε το κείμενο και με το .replace(/\s/g, '') σβήνουμε ΟΛΑ τα κενά
-            let val = document.getElementById('inputBox').value.trim().replace(/\s/g, '');
+            // Η "μαγική" σκούπα: Σβήνει κενά (\s) και παύλες (-)
+            let val = document.getElementById('inputBox').value.trim().replace(/[\s-]/g, '');
             let img = document.getElementById('barcodeImg');
             
             if (val.length > 5) {
-                // Τώρα το barcodeText δεν έχει καθόλου κενά, ακόμα κι αν έκανε λάθος ο υπάλληλος
                 let barcodeText = val; 
                 
+                // Δημιουργία Barcode Code128
                 img.src = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + encodeURIComponent(barcodeText) + "&scale=3&rotate=N&includetext=false";
                 img.style.display = "block";
             } else {
