@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCANNER PRO v3</title>
+    <title>SCANNER PRO v3.1</title>
     <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
     <style>
         body { background-color: #70dcdb; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        input { width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: 2px solid #333; margin-bottom: 10px; text-align: center; box-sizing: border-box; }
-        #btnScan { background-color: #333; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; margin-bottom: 20px; }
-        #interactive { width: 100%; height: 250px; background: #000; border: 4px solid #333; border-radius: 12px; overflow: hidden; margin-bottom: 20px; position: relative; display: none; }
+        input { width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: 2px solid #333; margin-bottom: 10px; text-align: center; box-sizing: border-box; font-weight: bold; }
+        #btnScan { background-color: #333; color: white; padding: 18px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        #interactive { width: 100%; height: 280px; background: #000; border: 4px solid #333; border-radius: 12px; overflow: hidden; margin-bottom: 20px; position: relative; display: none; }
         #interactive video { width: 100%; height: 100%; object-fit: cover; }
         canvas.drawingBuffer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #barcodeContainer { background-color: white; padding: 15px; border-radius: 12px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        #barcodeContainer { background-color: white; padding: 15px; border-radius: 12px; min-height: 120px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; }
         img { width: 100%; display: none; }
-        .copyright { margin-top: 20px; font-weight: bold; font-size: 12px; color: #333; }
+        .copyright { margin-top: 20px; font-weight: bold; font-size: 12px; color: #333; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -38,11 +38,13 @@
                 Quagga.stop();
                 document.getElementById('interactive').style.display = 'none';
                 document.getElementById('btnScan').innerText = "📸 ΕΝΑΡΞΗ ΣΚΑΝΑΡΙΣΜΑΤΟΣ";
+                document.getElementById('btnScan').style.backgroundColor = "#333";
                 scanning = false;
             } else {
                 document.getElementById('interactive').style.display = 'block';
                 startQuagga();
-                document.getElementById('btnScan').innerText = "❌ ΔΙΑΚΟΠΗ";
+                document.getElementById('btnScan').innerText = "❌ ΔΙΑΚΟΠΗ (ΚΛΕΙΣΙΜΟ)";
+                document.getElementById('btnScan').style.backgroundColor = "#d9534f";
                 scanning = true;
             }
         }
@@ -53,13 +55,23 @@
                     name: "Live",
                     type: "LiveStream",
                     target: document.querySelector('#interactive'),
-                    constraints: { facingMode: "environment" }
+                    constraints: {
+                        facingMode: "environment",
+                        width: { min: 640 },
+                        height: { min: 480 }
+                    },
                 },
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                },
+                numOfWorkers: 2,
+                frequency: 10,
                 decoder: {
-                    readers: ["code_128_reader", "ean_reader", "code_39_reader"]
+                    readers: ["code_128_reader", "ean_reader"]
                 }
             }, function(err) {
-                if (err) { console.log(err); return; }
+                if (err) { alert("Σφάλμα κάμερας: " + err); return; }
                 Quagga.start();
             });
 
@@ -69,8 +81,15 @@
                     let cleanCode = code.trim().replace(/[\s-]/g, '');
                     document.getElementById('inputBox').value = cleanCode;
                     generateBarcode();
-                    toggleScanner(); // Κλείνει αυτόματα μόλις βρει τον κωδικό
-                    if (navigator.vibrate) navigator.vibrate(100);
+                    
+                    // Επιτυχία! Κλείσιμο κάμερας και δόνηση
+                    Quagga.stop();
+                    document.getElementById('interactive').style.display = 'none';
+                    document.getElementById('btnScan').innerText = "📸 ΕΝΑΡΞΗ ΣΚΑΝΑΡΙΣΜΑΤΟΣ";
+                    document.getElementById('btnScan').style.backgroundColor = "#333";
+                    scanning = false;
+
+                    if (navigator.vibrate) navigator.vibrate(150);
                 }
             });
         }
@@ -81,6 +100,8 @@
             if (val.length > 3) {
                 img.src = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + encodeURIComponent(val) + "&scale=3&rotate=N&includetext=false";
                 img.style.display = "block";
+            } else {
+                img.style.display = "none";
             }
         }
     </script>
