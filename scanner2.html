@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAGAZI SCANNER PRO + CAMERA</title>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <style>
+        body { background-color: #70dcdb; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 95vh; }
+        input { width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: 2px solid #333; margin-bottom: 10px; text-align: center; }
+        
+        #btnScan { 
+            background-color: #333; color: white; padding: 15px; border: none; border-radius: 8px; 
+            font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; width: 100%;
+        }
+
+        #videoContainer { display: none; width: 100%; max-width: 400px; margin: 0 auto 20px; border: 3px solid #333; border-radius: 12px; overflow: hidden; position: relative; }
+        video { width: 100%; height: auto; }
+
+        #barcodeContainer { background-color: white; padding: 15px; border-radius: 12px; min-height: 150px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        img { width: 100%; max-width: 100%; height: auto; display: none; }
+        
+        .spacer { flex-grow: 1; }
+        .disco-bar { height: 10px; background-color: #FFD700; width: 100%; border-radius: 5px; margin: 5px 0; animation: blink 0.8s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .copyright { color: #333; font-weight: bold; font-size: 12px; margin: 5px 0; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="inputBox" placeholder="ΕΠΙΚΟΛΛΗΣΗ Ή ΣΚΑΝΑΡΙΣΜΑ" oninput="generateBarcode()">
+    
+    <button id="btnScan" onclick="startScanner()">📸 ΣΚΑΝΑΡΙΣΜΑ ΜΕ ΚΑΜΕΡΑ</button>
+
+    <div id="videoContainer">
+        <video id="video"></video>
+    </div>
+
+    <div id="barcodeContainer">
+        <img id="barcodeImg">
+    </div>
+
+    <div class="spacer"></div>
+    <div class="disco-bar"></div>
+    <div class="copyright">COPYRIGHT BY JIM DIOMIS</div>
+    <div class="disco-bar"></div>
+
+    <script>
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        let isScanning = false;
+
+        function startScanner() {
+            const videoContainer = document.getElementById('videoContainer');
+            const btn = document.getElementById('btnScan');
+
+            if (isScanning) {
+                codeReader.reset();
+                videoContainer.style.display = 'none';
+                btn.innerText = "📸 ΣΚΑΝΑΡΙΣΜΑ ΜΕ ΚΑΜΕΡΑ";
+                isScanning = false;
+                return;
+            }
+
+            videoContainer.style.display = 'block';
+            btn.innerText = "❌ ΚΛΕΙΣΕ ΚΑΜΕΡΑ";
+            isScanning = true;
+
+            codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                if (result) {
+                    // Μόλις βρει κωδικό:
+                    let rawText = result.text;
+                    // Καθαρίζουμε κενά και παύλες
+                    let cleanText = rawText.trim().replace(/[\s-]/g, '');
+                    document.getElementById('inputBox').value = cleanText;
+                    
+                    // Κλείνουμε κάμερα και φτιάχνουμε το barcode
+                    codeReader.reset();
+                    videoContainer.style.display = 'none';
+                    btn.innerText = "📸 ΣΚΑΝΑΡΙΣΜΑ ΜΕ ΚΑΜΕΡΑ";
+                    isScanning = false;
+                    generateBarcode();
+                }
+            });
+        }
+
+        function generateBarcode() {
+            let val = document.getElementById('inputBox').value.trim().replace(/[\s-]/g, '');
+            let img = document.getElementById('barcodeImg');
+            
+            if (val.length > 5) {
+                img.src = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + encodeURIComponent(val) + "&scale=3&rotate=N&includetext=false";
+                img.style.display = "block";
+            } else {
+                img.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
