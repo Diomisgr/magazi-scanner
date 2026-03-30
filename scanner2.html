@@ -2,32 +2,31 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCANNER PRO - PHOTO MODE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SCANNER PHOTO PRO v2</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
     <style>
-        body { background-color: #70dcdb; font-family: sans-serif; text-align: center; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        h2 { color: #333; font-size: 18px; }
-        input[type="text"] { width: 100%; padding: 15px; font-size: 22px; border: 2px solid #333; border-radius: 8px; margin: 15px 0; text-align: center; box-sizing: border-box; }
+        body { background-color: #70dcdb; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; justify-content: center;}
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); width: 90%; max-width: 350px; box-sizing: border-box;}
+        h2 { color: #333; font-size: 20px; margin-top: 0; text-transform: uppercase;}
+        input[type="text"] { width: 100%; padding: 18px; font-size: 24px; border: 3px solid #333; border-radius: 10px; margin: 20px 0; text-align: center; box-sizing: border-box; font-weight: bold; color: #2c3e50;}
         
-        /* Το "μαγικό" κουμπί */
-        .upload-btn {
-            background-color: #2ecc71; color: white; padding: 20px; border: none; border-radius: 8px;
-            font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; display: inline-block;
-            box-shadow: 0 5px #27ae60;
-        }
-        #fileInput { display: none; } /* Κρυφό input */
+        .upload-btn { background-color: #27ae60; color: white; padding: 20px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; display: inline-block; box-shadow: 0 6px #1e8449; transition: 0.1s; text-transform: uppercase;}
+        .upload-btn:active { box-shadow: 0 2px #1e8449; transform: translateY(4px); }
+        #fileInput { display: none; }
 
-        #barcodeCanvas { margin-top: 20px; width: 100%; max-width: 300px; }
-        .footer { margin-top: 30px; font-size: 12px; font-weight: bold; }
+        #result { margin-top: 25px; min-height: 120px; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border-radius: 10px; padding: 10px;}
+        #barcodeCanvas { width: 100%; max-width: 300px; height: auto;}
+        
+        #loading { display: none; color: #7f8c8d; font-size: 14px; margin-top: 10px; font-weight: bold;}
+        .copyright { margin-top: auto; padding: 20px; font-weight: bold; font-size: 12px; color: #333; text-transform: uppercase; letter-spacing: 1px;}
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>MAGAZI SCANNER PHOTO</h2>
+        <h2>PHOTO SCANNER v2</h2>
         
         <input type="text" id="inputBox" placeholder="ΚΩΔΙΚΟΣ ΕΔΩ" oninput="drawBarcode()">
 
@@ -35,21 +34,28 @@
             📸 ΒΓΑΛΕ ΦΩΤΟ ΤΟΝ ΚΩΔΙΚΟ
         </label>
         <input type="file" id="fileInput" accept="image/*" capture="environment">
+        
+        <div id="loading">⏳ Επεξεργασία φωτογραφίας...</div>
 
         <div id="result">
             <svg id="barcodeCanvas"></svg>
         </div>
     </div>
 
-    <div class="footer">COPYRIGHT BY JIM DIOMIS</div>
+    <div class="copyright">COPYRIGHT BY JIM DIOMIS</div>
 
     <script>
         const fileInput = document.getElementById('fileInput');
         const codeReader = new ZXing.BrowserMultiFormatReader();
+        const loading = document.getElementById('loading');
 
         fileInput.addEventListener('change', e => {
             if (e.target.files.length == 0) return;
             
+            loading.style.display = 'block';
+            document.getElementById('inputBox').value = '';
+            document.getElementById('barcodeCanvas').innerHTML = '';
+
             const file = e.target.files[0];
             const reader = new FileReader();
             
@@ -57,16 +63,51 @@
                 const img = new Image();
                 img.src = reader.result;
                 img.onload = function() {
-                    // Προσπάθεια ανάγνωσης από τη φωτό
-                    codeReader.decodeFromImageElement(img)
+                    // Δημιουργία Canvas για επεξεργασία της εικόνας
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2c');
+                    
+                    // Αλλαγή μεγέθους σε λογικά πλαίσια (max 1024px) για ταχύτητα
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_DIM = 1024;
+                    if (width > height) {
+                        if (width > MAX_DIM) { height *= MAX_DIM / width; width = MAX_DIM; }
+                    } else {
+                        if (height > MAX_DIM) { width *= MAX_DIM / height; height = MAX_DIM; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Σχεδίαση της εικόνας στο Canvas
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // --- ΕΞΥΠΝΗ ΕΠΕΞΕΡΓΑΣΙΑ: Μετατροπή σε Grayscale και Contrast ---
+                    const imageData = ctx.getImageData(0, 0, width, height);
+                    const data = imageData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        // Grayscale (μέσος όρος)
+                        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                        // Αύξηση Contrast (Thresholding)
+                        const v = (avg > 128) ? 255 : 0; // Αν είναι πάνω από το μισό γκρι, γίνεται λευκό, αλλιώς μαύρο
+                        data[i]     = v; // R
+                        data[i + 1] = v; // G
+                        data[i + 2] = v; // B
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // Προσπάθεια ανάγνωσης από το επεξεργασμένο Canvas
+                    codeReader.decodeFromCanvas(canvas)
                         .then(result => {
+                            loading.style.display = 'none';
                             let cleanCode = result.text.trim().replace(/[\s-]/g, '');
                             document.getElementById('inputBox').value = cleanCode;
                             drawBarcode();
                             if (navigator.vibrate) navigator.vibrate(200);
                         })
                         .catch(err => {
-                            alert("Δεν μπόρεσα να διαβάσω τον κώδικα. Ξαναβγάλε μια πιο καθαρή φωτό!");
+                            loading.style.display = 'none';
+                            alert("Δεν μπόρεσα να διαβάσω τον κώδικα. Κράτα το κινητό πιο σταθερό και ξαναβγάλε φωτό!");
                         });
                 };
             };
