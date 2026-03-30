@@ -3,69 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAGAZI SCANNER PRO + CAMERA</title>
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <title>SCANNER PRO v3</title>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
     <style>
-        body { background-color: #70dcdb; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 95vh; }
+        body { background-color: #70dcdb; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
         input { width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: 2px solid #333; margin-bottom: 10px; text-align: center; box-sizing: border-box; }
-        #btnScan { background-color: #333; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; width: 100%; }
-        #videoContainer { display: none; width: 100%; max-width: 400px; margin: 0 auto 20px; border: 4px solid #333; border-radius: 12px; overflow: hidden; background: #000; }
-        video { width: 100%; height: auto; }
-        #barcodeContainer { background-color: white; padding: 15px; border-radius: 12px; min-height: 150px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        img { width: 100%; max-width: 100%; height: auto; display: none; }
-        .disco-bar { height: 10px; background-color: #FFD700; width: 100%; border-radius: 5px; margin: 5px 0; animation: blink 0.8s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .copyright { color: #333; font-weight: bold; font-size: 12px; margin-top: auto; }
+        #btnScan { background-color: #333; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; margin-bottom: 20px; }
+        #interactive { width: 100%; height: 250px; background: #000; border: 4px solid #333; border-radius: 12px; overflow: hidden; margin-bottom: 20px; position: relative; display: none; }
+        #interactive video { width: 100%; height: 100%; object-fit: cover; }
+        canvas.drawingBuffer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #barcodeContainer { background-color: white; padding: 15px; border-radius: 12px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        img { width: 100%; display: none; }
+        .copyright { margin-top: 20px; font-weight: bold; font-size: 12px; color: #333; }
     </style>
 </head>
 <body>
 
-    <input type="text" id="inputBox" placeholder="ΕΠΙΚΟΛΛΗΣΗ Ή ΣΚΑΝΑΡΙΣΜΑ" oninput="generateBarcode()">
-    <button id="btnScan" onclick="startScanner()">📸 ΣΚΑΝΑΡΙΣΜΑ ΜΕ ΚΑΜΕΡΑ</button>
+    <input type="text" id="inputBox" placeholder="ΠΕΡΙΜΕΝΩ ΚΩΔΙΚΟ..." oninput="generateBarcode()">
+    <button id="btnScan" onclick="toggleScanner()">📸 ΕΝΑΡΞΗ ΣΚΑΝΑΡΙΣΜΑΤΟΣ</button>
 
-    <div id="videoContainer">
-        <video id="video"></video>
-    </div>
+    <div id="interactive" class="viewport"></div>
 
     <div id="barcodeContainer">
         <img id="barcodeImg">
     </div>
 
-    <div class="disco-bar"></div>
     <div class="copyright">COPYRIGHT BY JIM DIOMIS</div>
 
     <script>
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        let isScanning = false;
+        let scanning = false;
 
-        async function startScanner() {
-            const videoContainer = document.getElementById('videoContainer');
-            const btn = document.getElementById('btnScan');
-
-            if (isScanning) {
-                location.reload(); // Πιο σίγουρο κλείσιμο
-                return;
+        function toggleScanner() {
+            if (scanning) {
+                Quagga.stop();
+                document.getElementById('interactive').style.display = 'none';
+                document.getElementById('btnScan').innerText = "📸 ΕΝΑΡΞΗ ΣΚΑΝΑΡΙΣΜΑΤΟΣ";
+                scanning = false;
+            } else {
+                document.getElementById('interactive').style.display = 'block';
+                startQuagga();
+                document.getElementById('btnScan').innerText = "❌ ΔΙΑΚΟΠΗ";
+                scanning = true;
             }
+        }
 
-            videoContainer.style.display = 'block';
-            btn.innerText = "❌ ΚΛΕΙΣΕ ΚΑΜΕΡΑ";
-            isScanning = true;
+        function startQuagga() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: { facingMode: "environment" }
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "code_39_reader"]
+                }
+            }, function(err) {
+                if (err) { console.log(err); return; }
+                Quagga.start();
+            });
 
-            // Προσπάθεια να βρει την πίσω κάμερα (facingMode: environment)
-            const constraints = { video: { facingMode: "environment" } };
-
-            codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
-                if (result) {
-                    let cleanText = result.text.trim().replace(/[\s-]/g, '');
-                    document.getElementById('inputBox').value = cleanText;
-                    
-                    codeReader.reset();
-                    videoContainer.style.display = 'none';
-                    btn.innerText = "📸 ΣΚΑΝΑΡΙΣΜΑ ΜΕ ΚΑΜΕΡΑ";
-                    isScanning = false;
+            Quagga.onDetected(function(data) {
+                let code = data.codeResult.code;
+                if (code) {
+                    let cleanCode = code.trim().replace(/[\s-]/g, '');
+                    document.getElementById('inputBox').value = cleanCode;
                     generateBarcode();
-                    
-                    // Μικρή δόνηση αν το υποστηρίζει το κινητό
+                    toggleScanner(); // Κλείνει αυτόματα μόλις βρει τον κωδικό
                     if (navigator.vibrate) navigator.vibrate(100);
                 }
             });
@@ -77,8 +81,6 @@
             if (val.length > 3) {
                 img.src = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + encodeURIComponent(val) + "&scale=3&rotate=N&includetext=false";
                 img.style.display = "block";
-            } else {
-                img.style.display = "none";
             }
         }
     </script>
